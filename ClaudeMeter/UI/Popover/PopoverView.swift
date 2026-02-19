@@ -149,6 +149,18 @@ struct PopoverView: View {
                         resetsAt: opus.resetsAt
                     )
                 }
+
+                if let sonnet = data.sevenDaySonnet {
+                    UsageCardView(
+                        title: "Sonnet Only",
+                        usage: sonnet.utilization,
+                        resetsAt: sonnet.resetsAt
+                    )
+                }
+
+                if let extra = data.extraUsage, extra.isEnabled {
+                    extraUsageCardView(extra: extra)
+                }
             }
             .padding(.horizontal, contentPadding)
             .padding(.vertical, 8)
@@ -264,6 +276,64 @@ struct PopoverView: View {
         }
         .buttonStyle(.plain)
         .help("Visit puq.ai")
+    }
+
+    // MARK: - Extra Usage Card
+
+    private func extraUsageCardView(extra: ExtraUsage) -> some View {
+        let utilization = extra.utilization ?? 0
+        let progressColor = ColorTheme.colorForUsage(utilization)
+        let isCritical = utilization >= 90
+
+        return VStack(spacing: 12) {
+            // Header
+            HStack {
+                Text("Extra Usage")
+                    .font(.headline)
+                Spacer()
+                AnimatedPercentage(value: utilization)
+            }
+
+            // Progress Ring and Details
+            HStack(spacing: 16) {
+                ProgressRingView(
+                    progress: utilization / 100.0,
+                    color: progressColor,
+                    lineWidth: 6,
+                    size: 50
+                )
+                .glowEffect(isActive: isCritical, color: progressColor)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    ProgressBarView(
+                        progress: utilization / 100.0,
+                        showPercentage: false,
+                        height: 6
+                    )
+                    .frame(maxWidth: .infinity)
+
+                    // Spending info
+                    if let used = extra.usedCredits, let limit = extra.monthlyLimit {
+                        HStack(spacing: 4) {
+                            Image(systemName: "dollarsign.circle")
+                                .font(.caption2)
+                            Text(String(format: "$%.2f spent of $%.0f limit", used / 100.0, limit / 100.0))
+                                .font(.caption2)
+                        }
+                        .foregroundColor(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+        )
+        .shadow(color: isCritical ? progressColor.opacity(0.3) : .clear, radius: isCritical ? 8 : 0)
     }
 }
 

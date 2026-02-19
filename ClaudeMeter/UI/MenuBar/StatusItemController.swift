@@ -194,7 +194,8 @@ class StatusItemController: NSObject {
         let usages: [Double] = [
             data.fiveHour?.utilization ?? 0,
             data.sevenDay?.utilization ?? 0,
-            data.sevenDayOpus?.utilization ?? 0
+            data.sevenDayOpus?.utilization ?? 0,
+            data.sevenDaySonnet?.utilization ?? 0
         ]
 
         return usages.max() ?? 0
