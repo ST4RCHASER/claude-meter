@@ -101,19 +101,22 @@ class APIService: APIServiceProtocol {
         request.httpMethod = "GET"
         request.allHTTPHeaderFields = headers(token: token)
 
+        await DebugLogger.shared.log(.request, "GET \(url.absoluteString)", detail: "OAuth API")
+
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            await DebugLogger.shared.log(.error, "No HTTP response")
             throw APIError.noData
         }
+
+        let bodyPreview = String(data: data.prefix(500), encoding: .utf8) ?? "(binary)"
+        await DebugLogger.shared.log(.response, "HTTP \(httpResponse.statusCode)", detail: bodyPreview)
 
         switch httpResponse.statusCode {
         case 200:
             do {
                 let decoder = JSONDecoder()
-                // The API returns ISO 8601 dates with fractional seconds
-                // (e.g. "2026-02-19T07:00:00.125129+00:00") which the built-in
-                // .iso8601 strategy does NOT support. Use a custom formatter.
                 let isoFormatter = ISO8601DateFormatter()
                 isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
                 decoder.dateDecodingStrategy = .custom { decoder in
@@ -122,7 +125,6 @@ class APIService: APIServiceProtocol {
                     if let date = isoFormatter.date(from: dateString) {
                         return date
                     }
-                    // Fallback: try without fractional seconds
                     let fallbackFormatter = ISO8601DateFormatter()
                     fallbackFormatter.formatOptions = [.withInternetDateTime]
                     if let date = fallbackFormatter.date(from: dateString) {
@@ -130,9 +132,11 @@ class APIService: APIServiceProtocol {
                     }
                     throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date: \(dateString)")
                 }
-                return try decoder.decode(UsageData.self, from: data)
+                let decoded = try decoder.decode(UsageData.self, from: data)
+                await DebugLogger.shared.log(.info, "OAuth API decoded OK", detail: "5h=\(decoded.fiveHour?.utilization ?? -1)% 7d=\(decoded.sevenDay?.utilization ?? -1)%")
+                return decoded
             } catch {
-                print("APIService: Decoding error details - \(error)")
+                await DebugLogger.shared.log(.error, "Decode failed", detail: "\(error)")
                 throw APIError.decodingError
             }
         case 401:
@@ -158,40 +162,35 @@ class APIService: APIServiceProtocol {
 
                 switch error {
                 case .rateLimited:
-                    // 429: Use exponential backoff
                     let delay = retryConfig.delay(for: attempt)
-                    print("APIService: Rate limited, waiting \(delay)s before retry \(attempt + 1)")
+                    await DebugLogger.shared.log(.info, "Rate limited, retry \(attempt + 1)/\(retryConfig.maxRetries) in \(String(format: "%.0f", delay))s")
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
 
                 case .serverError(let code) where code >= 500:
-                    // 5xx: Wait longer before retry
                     let delay = max(retryConfig.delay(for: attempt), Constants.Retry.serverErrorMinDelay)
-                    print("APIService: Server error \(code), waiting \(delay)s before retry \(attempt + 1)")
+                    await DebugLogger.shared.log(.info, "Server error \(code), retry \(attempt + 1)/\(retryConfig.maxRetries) in \(String(format: "%.0f", delay))s")
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
 
                 case .unauthorized:
-                    // Don't retry auth errors
                     throw error
 
                 case .networkError:
-                    // Network errors: short delay and retry
                     let delay = retryConfig.delay(for: attempt)
-                    print("APIService: Network error, waiting \(delay)s before retry \(attempt + 1)")
+                    await DebugLogger.shared.log(.info, "Network error, retry \(attempt + 1)/\(retryConfig.maxRetries) in \(String(format: "%.0f", delay))s")
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
 
                 default:
-                    // Other errors: don't retry
                     throw error
                 }
             } catch {
-                // URLSession errors (network issues)
                 lastError = APIError.networkError(error)
                 let delay = retryConfig.delay(for: attempt)
-                print("APIService: Request failed, waiting \(delay)s before retry \(attempt + 1)")
+                await DebugLogger.shared.log(.info, "Request failed, retry \(attempt + 1)/\(retryConfig.maxRetries) in \(String(format: "%.0f", delay))s")
                 try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             }
         }
 
+        await DebugLogger.shared.log(.error, "All \(retryConfig.maxRetries) retries exhausted")
         throw APIError.maxRetriesExceeded(lastError: lastError)
     }
 
@@ -219,11 +218,17 @@ class APIService: APIServiceProtocol {
         request.setValue("sessionKey=\(sessionKey)", forHTTPHeaderField: "Cookie")
         request.setValue(Constants.API.userAgent, forHTTPHeaderField: "User-Agent")
 
+        await DebugLogger.shared.log(.fallback, "GET \(url.absoluteString)", detail: "Web API fallback")
+
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            await DebugLogger.shared.log(.error, "Web API: no HTTP response")
             throw APIError.noData
         }
+
+        let bodyPreview = String(data: data.prefix(500), encoding: .utf8) ?? "(binary)"
+        await DebugLogger.shared.log(.response, "Web API HTTP \(httpResponse.statusCode)", detail: bodyPreview)
 
         switch httpResponse.statusCode {
         case 200:
@@ -244,9 +249,11 @@ class APIService: APIServiceProtocol {
                     }
                     throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date: \(dateString)")
                 }
-                return try decoder.decode(UsageData.self, from: data)
+                let decoded = try decoder.decode(UsageData.self, from: data)
+                await DebugLogger.shared.log(.fallback, "Web API decoded OK", detail: "5h=\(decoded.fiveHour?.utilization ?? -1)% 7d=\(decoded.sevenDay?.utilization ?? -1)%")
+                return decoded
             } catch {
-                print("APIService: Web API decoding error - \(error)")
+                await DebugLogger.shared.log(.error, "Web API decode failed", detail: "\(error)")
                 throw APIError.decodingError
             }
         case 401, 403:

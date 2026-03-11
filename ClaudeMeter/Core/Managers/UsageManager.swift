@@ -60,16 +60,20 @@ class UsageManager: ObservableObject {
         isLoading = true
         error = nil
 
+        await DebugLogger.shared.log(.info, "Fetch started")
+
         do {
             // 1. Get Token
             guard let credentials = try keychainService.getCredentials() else {
                 throw AppError.noCredentials
             }
 
-            // Check if credentials are valid
             guard credentials.isValid else {
+                await DebugLogger.shared.log(.error, "Token expired", detail: "Expires: \(credentials.expiresAt)")
                 throw AppError.credentialsExpired
             }
+
+            await DebugLogger.shared.log(.info, "Token OK, expires \(credentials.expiresAt)", detail: "Type: \(credentials.subscriptionType)")
 
             // 2. Fetch Data with retry
             let data = try await apiService.fetchUsageWithRetry(token: credentials.accessToken)
@@ -77,43 +81,43 @@ class UsageManager: ObservableObject {
             // 3. Update State
             self.usageData = data
             self.error = nil
-
-            // 4. Cache the data
             cacheManager.cacheUsageData(data)
 
+            await DebugLogger.shared.log(.info, "Fetch success (OAuth API)")
+
         } catch let error as APIError {
+            await DebugLogger.shared.log(.error, "OAuth API failed: \(error.localizedDescription ?? "unknown")")
+
             // Try web API fallback before giving up
             if let fallbackData = await tryWebAPIFallback() {
                 self.usageData = fallbackData
                 self.error = nil
                 cacheManager.cacheUsageData(fallbackData)
-                print("UsageManager: Web API fallback succeeded")
+                await DebugLogger.shared.log(.fallback, "Fallback success, using web API data")
                 isLoading = false
                 return
             }
 
             self.error = AppError.from(error)
-            print("UsageManager: API error - \(error)")
-
-            // Try to use cached data on error
             loadCachedData()
+            if self.usageData != nil {
+                await DebugLogger.shared.log(.cache, "Using cached data")
+            }
 
         } catch let error as KeychainError {
             self.error = AppError.from(error)
-            print("UsageManager: Keychain error - \(error)")
+            await DebugLogger.shared.log(.error, "Keychain error: \(error)")
 
         } catch let error as AppError {
             self.error = error
-            print("UsageManager: App error - \(error)")
-
-            // Try to use cached data on error
+            await DebugLogger.shared.log(.error, "App error: \(error)")
             if error.shouldRetry {
                 loadCachedData()
             }
 
         } catch {
             self.error = AppError.unknown(error.localizedDescription)
-            print("UsageManager: Unknown error - \(error)")
+            await DebugLogger.shared.log(.error, "Unknown error: \(error)")
         }
 
         isLoading = false

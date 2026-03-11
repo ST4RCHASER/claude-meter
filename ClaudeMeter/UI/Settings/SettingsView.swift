@@ -74,7 +74,8 @@ struct SettingsView: View {
             Label("General", systemImage: "gear").tag(0)
             Label("Appearance", systemImage: "paintpalette").tag(1)
             Label("Notifications", systemImage: "bell").tag(2)
-            Label("About", systemImage: "info.circle").tag(3)
+            Label("Debug", systemImage: "ladybug").tag(3)
+            Label("About", systemImage: "info.circle").tag(4)
         }
         .pickerStyle(.segmented)
         .labelsHidden()
@@ -89,7 +90,8 @@ struct SettingsView: View {
             case 0: GeneralSettingsView(appState: appState)
             case 1: AppearanceSettingsView(appState: appState)
             case 2: NotificationSettingsView(appState: appState)
-            case 3: AboutView()
+            case 3: DebugLogView()
+            case 4: AboutView()
             default: EmptyView()
             }
         }
