@@ -113,6 +113,10 @@ class AppState: ObservableObject {
         // Apply refresh interval to polling manager
         pollingManager.setDefaultInterval(TimeInterval(settings.refreshInterval))
 
+        // Apply web API fallback credentials
+        usageManager.webSessionKey = settings.webSessionKey
+        usageManager.webOrganizationId = settings.webOrganizationId
+
         // Apply dock visibility
         if settings.showInDock {
             NSApp.setActivationPolicy(.regular)

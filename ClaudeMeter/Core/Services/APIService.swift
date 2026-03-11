@@ -204,6 +204,62 @@ class APIService: APIServiceProtocol {
         }
     }
 
+    // MARK: - Web API Fallback
+
+    func fetchUsageFromWeb(sessionKey: String, organizationId: String) async throws -> UsageData {
+        let path = String(format: Constants.API.webUsageEndpoint, organizationId)
+        guard let url = URL(string: Constants.API.webBaseURL + path) else {
+            throw APIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("sessionKey=\(sessionKey)", forHTTPHeaderField: "Cookie")
+        request.setValue(Constants.API.userAgent, forHTTPHeaderField: "User-Agent")
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.noData
+        }
+
+        switch httpResponse.statusCode {
+        case 200:
+            do {
+                let decoder = JSONDecoder()
+                let isoFormatter = ISO8601DateFormatter()
+                isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                decoder.dateDecodingStrategy = .custom { decoder in
+                    let container = try decoder.singleValueContainer()
+                    let dateString = try container.decode(String.self)
+                    if let date = isoFormatter.date(from: dateString) {
+                        return date
+                    }
+                    let fallbackFormatter = ISO8601DateFormatter()
+                    fallbackFormatter.formatOptions = [.withInternetDateTime]
+                    if let date = fallbackFormatter.date(from: dateString) {
+                        return date
+                    }
+                    throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date: \(dateString)")
+                }
+                return try decoder.decode(UsageData.self, from: data)
+            } catch {
+                print("APIService: Web API decoding error - \(error)")
+                throw APIError.decodingError
+            }
+        case 401, 403:
+            throw APIError.unauthorized
+        case 429:
+            throw APIError.rateLimited
+        case 500...599:
+            throw APIError.serverError(statusCode: httpResponse.statusCode)
+        default:
+            throw APIError.serverError(statusCode: httpResponse.statusCode)
+        }
+    }
+
     // MARK: - Headers
     private func headers(token: String) -> [String: String] {
         return [

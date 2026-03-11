@@ -25,6 +25,10 @@ enum Constants {
         static let anthropicBeta = "oauth-2025-04-20"
         static let contentType = "application/json"
         static let acceptType = "application/json"
+
+        // Web API fallback (claude.ai)
+        static let webBaseURL = "https://claude.ai"
+        static let webUsageEndpoint = "/api/organizations/%@/usage"
     }
 
     // MARK: - Retry Configuration

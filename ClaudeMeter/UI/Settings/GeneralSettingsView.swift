@@ -63,6 +63,20 @@ struct GeneralSettingsView: View {
                         .accessibilityLabel("Show Opus Limit")
                         .accessibilityHint("When enabled, shows the Opus model usage limit")
                 }
+
+                Section(header: Text("Web API Fallback")) {
+                    TextField("Organization ID", text: $appState.settings.webOrganizationId)
+                        .font(.caption)
+                        .help("Your Claude organization UUID (from claude.ai URL)")
+
+                    SecureField("Session Key", text: $appState.settings.webSessionKey)
+                        .font(.caption)
+                        .help("sessionKey cookie from claude.ai browser session")
+
+                    Text("Used as backup when the OAuth API is rate limited.")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
             .formStyle(.grouped)
             .scrollIndicators(.hidden)

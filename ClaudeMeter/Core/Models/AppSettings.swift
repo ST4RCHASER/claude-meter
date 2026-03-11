@@ -49,6 +49,10 @@ struct AppSettings: Codable, Equatable {
     var notifyAt: [Int] = Constants.Settings.defaultNotifyThresholds
     var notificationsEnabled: Bool = true
 
+    // Web API Fallback (claude.ai session credentials)
+    var webSessionKey: String = ""
+    var webOrganizationId: String = ""
+
     // Computed property for backward compatibility
     var notifyAt90: Bool {
         get { notifyAt.contains(90) }

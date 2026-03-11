@@ -238,7 +238,16 @@ struct PopoverView: View {
 
     private var footerView: some View {
         HStack {
-            if let lastUpdate = appState.lastUpdateTime {
+            if let error = appState.error {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.caption2)
+                    .foregroundColor(ColorTheme.orange)
+                Text(error.localizedDescription)
+                    .font(.caption2)
+                    .foregroundColor(ColorTheme.orange)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            } else if let lastUpdate = appState.lastUpdateTime {
                 Text("Updated \(lastUpdate.relativeDescription)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
