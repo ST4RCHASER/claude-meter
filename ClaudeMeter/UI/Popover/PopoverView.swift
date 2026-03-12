@@ -126,44 +126,54 @@ struct PopoverView: View {
     private func usageContentView(data: UsageData) -> some View {
         ScrollView {
             VStack(spacing: 12) {
-                if let fiveHour = data.fiveHour {
-                    UsageCardView(
-                        title: "5-Hour Limit",
-                        usage: fiveHour.utilization,
-                        resetsAt: fiveHour.resetsAt
-                    )
-                }
-
-                if let sevenDay = data.sevenDay {
-                    UsageCardView(
-                        title: "7-Day Limit",
-                        usage: sevenDay.utilization,
-                        resetsAt: sevenDay.resetsAt
-                    )
-                }
-
-                if appState.settings.showOpusLimit, let opus = data.sevenDayOpus {
-                    UsageCardView(
-                        title: "Opus Limit",
-                        usage: opus.utilization,
-                        resetsAt: opus.resetsAt
-                    )
-                }
-
-                if let sonnet = data.sevenDaySonnet {
-                    UsageCardView(
-                        title: "Sonnet Only",
-                        usage: sonnet.utilization,
-                        resetsAt: sonnet.resetsAt
-                    )
-                }
-
-                if let extra = data.extraUsage, extra.isEnabled {
-                    extraUsageCardView(extra: extra)
+                ForEach(appState.settings.cardOrder) { cardType in
+                    cardView(for: cardType, data: data)
                 }
             }
             .padding(.horizontal, contentPadding)
             .padding(.vertical, 8)
+        }
+    }
+
+    @ViewBuilder
+    private func cardView(for cardType: CardType, data: UsageData) -> some View {
+        switch cardType {
+        case .fiveHour:
+            if let fiveHour = data.fiveHour {
+                UsageCardView(
+                    title: "5-Hour Limit",
+                    usage: fiveHour.utilization,
+                    resetsAt: fiveHour.resetsAt
+                )
+            }
+        case .sevenDay:
+            if let sevenDay = data.sevenDay {
+                UsageCardView(
+                    title: "7-Day Limit",
+                    usage: sevenDay.utilization,
+                    resetsAt: sevenDay.resetsAt
+                )
+            }
+        case .opus:
+            if appState.settings.showOpusLimit, let opus = data.sevenDayOpus {
+                UsageCardView(
+                    title: "Opus Limit",
+                    usage: opus.utilization,
+                    resetsAt: opus.resetsAt
+                )
+            }
+        case .sonnet:
+            if let sonnet = data.sevenDaySonnet {
+                UsageCardView(
+                    title: "Sonnet Only",
+                    usage: sonnet.utilization,
+                    resetsAt: sonnet.resetsAt
+                )
+            }
+        case .extraUsage:
+            if let extra = data.extraUsage, extra.isEnabled {
+                extraUsageCardView(extra: extra, credits: appState.prepaidCredits)
+            }
         }
     }
 
@@ -289,7 +299,7 @@ struct PopoverView: View {
 
     // MARK: - Extra Usage Card
 
-    private func extraUsageCardView(extra: ExtraUsage) -> some View {
+    private func extraUsageCardView(extra: ExtraUsage, credits: PrepaidCredits? = nil) -> some View {
         let utilization = extra.utilization ?? 0
         let progressColor = ColorTheme.colorForUsage(utilization)
         let isCritical = utilization >= 90
@@ -333,6 +343,41 @@ struct PopoverView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            // Prepaid Credits (sub-section)
+            if let credits = credits {
+                Divider()
+                    .opacity(0.3)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "creditcard")
+                                .font(.caption2)
+                            Text("Prepaid Balance")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                        }
+
+                        if let pending = credits.pendingInvoiceAmountCents, pending > 0 {
+                            HStack(spacing: 4) {
+                                Image(systemName: "clock")
+                                    .font(.caption2)
+                                Text(String(format: "$%.2f pending", credits.pendingDollars))
+                                    .font(.caption2)
+                            }
+                            .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Spacer()
+
+                    Text(String(format: "$%.2f", credits.remainingDollars))
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(credits.amount > 0 ? ColorTheme.green : ColorTheme.red)
+                }
             }
         }
         .padding()

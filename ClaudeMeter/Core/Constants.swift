@@ -29,6 +29,7 @@ enum Constants {
         // Web API fallback (claude.ai)
         static let webBaseURL = "https://claude.ai"
         static let webUsageEndpoint = "/api/organizations/%@/usage"
+        static let webCreditsEndpoint = "/api/organizations/%@/prepaid/credits"
     }
 
     // MARK: - Retry Configuration

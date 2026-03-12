@@ -64,6 +64,39 @@ struct GeneralSettingsView: View {
                         .accessibilityHint("When enabled, shows the Opus model usage limit")
                 }
 
+                Section(header: Text("Card Order")) {
+                    ForEach(appState.settings.cardOrder) { card in
+                        HStack(spacing: 8) {
+                            Image(systemName: card.icon)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .frame(width: 16)
+                            Text(card.displayName)
+                                .font(.caption)
+                            Spacer()
+                            VStack(spacing: 0) {
+                                Button {
+                                    moveCard(card, direction: .up)
+                                } label: {
+                                    Image(systemName: "chevron.up")
+                                        .font(.caption2)
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(appState.settings.cardOrder.first == card)
+
+                                Button {
+                                    moveCard(card, direction: .down)
+                                } label: {
+                                    Image(systemName: "chevron.down")
+                                        .font(.caption2)
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(appState.settings.cardOrder.last == card)
+                            }
+                        }
+                    }
+                }
+
                 Section(header: Text("Web API Fallback")) {
                     TextField("Organization ID", text: $appState.settings.webOrganizationId)
                         .font(.caption)
@@ -80,6 +113,17 @@ struct GeneralSettingsView: View {
             }
             .formStyle(.grouped)
             .scrollIndicators(.hidden)
+        }
+    }
+
+    private enum MoveDirection { case up, down }
+
+    private func moveCard(_ card: CardType, direction: MoveDirection) {
+        guard let index = appState.settings.cardOrder.firstIndex(of: card) else { return }
+        let newIndex = direction == .up ? index - 1 : index + 1
+        guard newIndex >= 0, newIndex < appState.settings.cardOrder.count else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            appState.settings.cardOrder.swapAt(index, newIndex)
         }
     }
 

@@ -19,6 +19,7 @@
 		MOD004 /* Credentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC007; };
 		MOD005 /* TokenUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC040; };
 		MOD007 /* SubscriptionType.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC042; };
+		MOD008 /* PrepaidCredits.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC043; };
 
 		/* Core Services */
 		SVC001 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRC008; };
@@ -129,6 +130,7 @@
 		SRC007 /* Credentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Credentials.swift; sourceTree = "<group>"; };
 		SRC040 /* TokenUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenUsage.swift; sourceTree = "<group>"; };
 		SRC042 /* SubscriptionType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionType.swift; sourceTree = "<group>"; };
+		SRC043 /* PrepaidCredits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrepaidCredits.swift; sourceTree = "<group>"; };
 
 		/* Core Services */
 		SRC008 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
@@ -308,6 +310,7 @@
 				SRC007 /* Credentials.swift */,
 				SRC040 /* TokenUsage.swift */,
 				SRC042 /* SubscriptionType.swift */,
+				SRC043 /* PrepaidCredits.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -600,6 +603,7 @@
 				MOD004 /* Credentials.swift in Sources */,
 				MOD005 /* TokenUsage.swift in Sources */,
 				MOD007 /* SubscriptionType.swift in Sources */,
+				MOD008 /* PrepaidCredits.swift in Sources */,
 				SVC001 /* APIService.swift in Sources */,
 				SVC002 /* KeychainService.swift in Sources */,
 				SVC003 /* NotificationService.swift in Sources */,

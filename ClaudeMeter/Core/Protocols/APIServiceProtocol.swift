@@ -31,4 +31,11 @@ protocol APIServiceProtocol {
     ///   - organizationId: The organization UUID
     /// - Returns: UsageData from the web API
     func fetchUsageFromWeb(sessionKey: String, organizationId: String) async throws -> UsageData
+
+    /// Fetch prepaid credits from the web API (claude.ai)
+    /// - Parameters:
+    ///   - sessionKey: The session cookie value
+    ///   - organizationId: The organization UUID
+    /// - Returns: PrepaidCredits from the web API
+    func fetchCreditsFromWeb(sessionKey: String, organizationId: String) async throws -> PrepaidCredits
 }

@@ -12,6 +12,7 @@ import Combine
 @MainActor
 class UsageManager: ObservableObject {
     @Published var usageData: UsageData?
+    @Published var prepaidCredits: PrepaidCredits?
     @Published var isLoading: Bool = false
     @Published var error: Error?
 
@@ -83,6 +84,9 @@ class UsageManager: ObservableObject {
             self.error = nil
             cacheManager.cacheUsageData(data)
 
+            // 4. Fetch prepaid credits (best-effort, requires web credentials)
+            await fetchCredits()
+
             await DebugLogger.shared.log(.info, "Fetch success (OAuth API)")
 
         } catch let error as APIError {
@@ -93,6 +97,7 @@ class UsageManager: ObservableObject {
                 self.usageData = fallbackData
                 self.error = nil
                 cacheManager.cacheUsageData(fallbackData)
+                await fetchCredits()
                 await DebugLogger.shared.log(.fallback, "Fallback success, using web API data")
                 isLoading = false
                 return
@@ -135,6 +140,20 @@ class UsageManager: ObservableObject {
         } catch {
             print("UsageManager: Web API fallback failed - \(error)")
             return nil
+        }
+    }
+
+    // MARK: - Prepaid Credits
+
+    private func fetchCredits() async {
+        guard !webSessionKey.isEmpty, !webOrganizationId.isEmpty else {
+            return
+        }
+        do {
+            let credits = try await apiService.fetchCreditsFromWeb(sessionKey: webSessionKey, organizationId: webOrganizationId)
+            self.prepaidCredits = credits
+        } catch {
+            await DebugLogger.shared.log(.error, "Credits fetch failed: \(error.localizedDescription)")
         }
     }
 

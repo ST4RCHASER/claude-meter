@@ -31,6 +31,39 @@ enum AppColorScheme: String, Codable, CaseIterable {
     }
 }
 
+// MARK: - Card Type
+enum CardType: String, Codable, CaseIterable, Identifiable {
+    case fiveHour = "five_hour"
+    case sevenDay = "seven_day"
+    case opus = "opus"
+    case sonnet = "sonnet"
+    case extraUsage = "extra_usage"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .fiveHour: return "5-Hour Limit"
+        case .sevenDay: return "7-Day Limit"
+        case .opus: return "Opus Limit"
+        case .sonnet: return "Sonnet Only"
+        case .extraUsage: return "Extra Usage"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .fiveHour: return "clock"
+        case .sevenDay: return "calendar"
+        case .opus: return "sparkles"
+        case .sonnet: return "music.note"
+        case .extraUsage: return "creditcard"
+        }
+    }
+
+    static let defaultOrder: [CardType] = [.fiveHour, .sevenDay, .opus, .sonnet, .extraUsage]
+}
+
 // MARK: - App Settings
 struct AppSettings: Codable, Equatable {
     // Display
@@ -38,6 +71,7 @@ struct AppSettings: Codable, Equatable {
     var colorScheme: AppColorScheme = .auto
     var showInDock: Bool = false
     var showOpusLimit: Bool = true
+    var cardOrder: [CardType] = CardType.defaultOrder
 
     // Polling
     var refreshInterval: Int = Constants.Settings.defaultRefreshInterval
@@ -114,6 +148,17 @@ extension AppSettings {
         // Ensure at least default thresholds if empty
         if notifyAt.isEmpty {
             notifyAt = Constants.Settings.defaultNotifyThresholds
+        }
+
+        // Ensure card order contains all card types
+        let allCards = Set(CardType.allCases)
+        let currentCards = Set(cardOrder)
+        if currentCards != allCards {
+            // Add missing cards at the end
+            let missing = CardType.defaultOrder.filter { !currentCards.contains($0) }
+            // Remove duplicates/invalid
+            cardOrder = cardOrder.filter { allCards.contains($0) }
+            cardOrder.append(contentsOf: missing)
         }
     }
 }

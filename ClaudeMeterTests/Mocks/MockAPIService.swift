@@ -19,6 +19,7 @@ class MockAPIService: APIServiceProtocol {
 
     // MARK: - Stubbed Responses
     var stubbedUsageData: UsageData?
+    var stubbedCredits: PrepaidCredits?
     var stubbedError: Error?
     var stubbedTokenValid = true
 
@@ -70,6 +71,16 @@ class MockAPIService: APIServiceProtocol {
         return data
     }
 
+    func fetchCreditsFromWeb(sessionKey: String, organizationId: String) async throws -> PrepaidCredits {
+        if let error = stubbedError {
+            throw error
+        }
+        guard let data = stubbedCredits else {
+            throw APIError.noData
+        }
+        return data
+    }
+
     // MARK: - Reset
 
     func reset() {
@@ -78,6 +89,7 @@ class MockAPIService: APIServiceProtocol {
         validateTokenCallCount = 0
         lastToken = nil
         stubbedUsageData = nil
+        stubbedCredits = nil
         stubbedError = nil
         stubbedTokenValid = true
     }

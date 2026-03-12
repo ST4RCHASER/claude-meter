@@ -267,6 +267,55 @@ class APIService: APIServiceProtocol {
         }
     }
 
+    // MARK: - Web Credits API
+
+    func fetchCreditsFromWeb(sessionKey: String, organizationId: String) async throws -> PrepaidCredits {
+        let path = String(format: Constants.API.webCreditsEndpoint, organizationId)
+        guard let url = URL(string: Constants.API.webBaseURL + path) else {
+            throw APIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("sessionKey=\(sessionKey)", forHTTPHeaderField: "Cookie")
+        request.setValue(Constants.API.userAgent, forHTTPHeaderField: "User-Agent")
+
+        await DebugLogger.shared.log(.request, "GET \(url.absoluteString)", detail: "Credits API")
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            await DebugLogger.shared.log(.error, "Credits API: no HTTP response")
+            throw APIError.noData
+        }
+
+        let bodyPreview = String(data: data.prefix(500), encoding: .utf8) ?? "(binary)"
+        await DebugLogger.shared.log(.response, "Credits API HTTP \(httpResponse.statusCode)", detail: bodyPreview)
+
+        switch httpResponse.statusCode {
+        case 200:
+            do {
+                let decoder = JSONDecoder()
+                let decoded = try decoder.decode(PrepaidCredits.self, from: data)
+                await DebugLogger.shared.log(.info, "Credits API decoded OK", detail: "amount=\(decoded.amount) pending=\(decoded.pendingInvoiceAmountCents ?? 0)")
+                return decoded
+            } catch {
+                await DebugLogger.shared.log(.error, "Credits API decode failed", detail: "\(error)")
+                throw APIError.decodingError
+            }
+        case 401, 403:
+            throw APIError.unauthorized
+        case 429:
+            throw APIError.rateLimited
+        case 500...599:
+            throw APIError.serverError(statusCode: httpResponse.statusCode)
+        default:
+            throw APIError.serverError(statusCode: httpResponse.statusCode)
+        }
+    }
+
     // MARK: - Headers
     private func headers(token: String) -> [String: String] {
         return [

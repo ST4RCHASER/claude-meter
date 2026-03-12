@@ -14,6 +14,7 @@ import AppKit
 class AppState: ObservableObject {
     // Usage Data
     @Published var usageData: UsageData?
+    @Published var prepaidCredits: PrepaidCredits?
     @Published var isLoading: Bool = false
     @Published var lastUpdateTime: Date?
     @Published var error: Error?
@@ -89,6 +90,10 @@ class AppState: ObservableObject {
                 }
             }
             .store(in: &cancellables)
+
+        usageManager.$prepaidCredits
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$prepaidCredits)
 
         usageManager.$isLoading
             .receive(on: DispatchQueue.main)
